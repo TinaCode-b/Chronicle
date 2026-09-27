@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Civilizations — Chronicle</title>
+<meta name="description" content="Explore civilizations from Africa, Europe, Asia, and the Americas — their achievements, regions, and periods.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="civilizations">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+    <nav class="nav-menu" data-nav-menu>
+      <ul class="nav-links">
+        <li><a href="index.html" data-page="home">Home</a></li>
+        <li><a href="explore.html" data-page="explore">Explore</a></li>
+        <li><a href="timeline.html" data-page="timeline">Timeline</a></li>
+        <li><a href="civilizations.html" data-page="civilizations">Civilizations</a></li>
+        <li><a href="figures.html" data-page="figures">Figures</a></li>
+        <li><a href="quizzes.html" data-page="quizzes">Quizzes</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg class="icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" style="padding-bottom:40px;">
+    <div class="container">
+      <p class="hero-eyebrow">Civilizations</p>
+      <h1 style="font-size:clamp(36px,5vw,56px);">Empires and Kingdoms</h1>
+      <p class="lede">Nineteen civilizations from Africa, Europe, Asia, and the Americas — what they built, and why they mattered.</p>
+    </div>
+  </section>
+
+  <section class="container" style="padding-bottom:90px;">
+    <div class="controls-bar">
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" class="search-input" id="civ-search" placeholder="Search civilizations, regions, achievements..." aria-label="Search civilizations">
+        </div>
+      </div>
+      <div class="filter-groups">
+        <div class="filter-group">
+          <span class="filter-group-label">Region</span>
+          <div class="chip-row" id="region-filters"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-row">
+      <p class="results-count"><strong id="result-number">0</strong> <span id="result-label">civilizations</span></p>
+      <button class="clear-filters-btn" id="clear-filters">Clear filters</button>
+    </div>
+
+    <div class="card-grid" id="civ-results"></div>
+    <div class="empty-state" id="civ-empty" hidden>
+      <h3>No civilizations found</h3>
+      <p>Try another name, region, period, or keyword.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+        <p class="footer-tagline">History, beautifully told.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="explore.html">Explore</a></li>
+        <li><a href="timeline.html">Timeline</a></li>
+        <li><a href="civilizations.html">Civilizations</a></li>
+        <li><a href="figures.html">Figures</a></li>
+        <li><a href="quizzes.html">Quizzes</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </div>
+    <div class="footer-bottom">&copy; <span data-current-year>2026</span> Chronicle. History, beautifully told.</div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const civs = getCivilizations();
+  const state = { query: "", region: "All" };
+  const regionOrder = ["All", "Africa", "Europe", "Asia", "Americas", "Middle East"];
+  const regions = regionOrder.filter(r => r === "All" || civs.some(c => c.region === r));
+
+  function renderChips() {
+    const el = document.getElementById("region-filters");
+    el.innerHTML = regions.map(opt => `<button class="chip ${state.region === opt ? "is-active" : ""}" data-value="${escapeHtml(opt)}">${escapeHtml(opt)}</button>`).join("");
+    el.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => { state.region = btn.getAttribute("data-value"); render(); });
+    });
+  }
+
+  function matches(c) {
+    if (state.region !== "All" && c.region !== state.region) return false;
+    return itemMatchesSearch(c, state.query);
+  }
+
+  function render() {
+    renderChips();
+    const q = normalizeSearchText(state.query);
+    let results = civs.filter(matches);
+    if (q) results = results.sort((a, b) => getSearchScore(b, q) - getSearchScore(a, q));
+
+    document.getElementById("result-number").textContent = results.length;
+    document.getElementById("result-label").textContent = results.length === 1 ? "civilization" : "civilizations";
+
+    const grid = document.getElementById("civ-results");
+    const empty = document.getElementById("civ-empty");
+
+    if (results.length === 0) {
+      grid.innerHTML = "";
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+    grid.innerHTML = results.map(c => `
+      <article class="card civ-card">
+        <div class="card-media"><img src="${makePlateImage(c.name, c.id)}" alt="${escapeHtml(c.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(c.name)}','${c.id}')"></div>
+        <div class="card-body">
+          <p class="card-eyebrow">${escapeHtml(c.region)} &middot; ${escapeHtml(c.period)}</p>
+          <h3>${escapeHtml(c.name)}</h3>
+          <p>${escapeHtml(c.description)}</p>
+          <ul class="achievement-list">
+            ${c.achievements.map(a => `<li>${escapeHtml(a)}</li>`).join("")}
+          </ul>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  document.getElementById("civ-search").addEventListener("input", (e) => { state.query = e.target.value; render(); });
+  document.getElementById("clear-filters").addEventListener("click", () => {
+    state.query = ""; state.region = "All";
+    document.getElementById("civ-search").value = "";
+    render();
+  });
+
+  render();
+});
+</script>
+</body>
+</html>

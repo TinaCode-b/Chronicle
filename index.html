@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chronicle — History, Beautifully Told</title>
+<meta name="description" content="Chronicle is a historical knowledge platform for exploring events, civilizations, timelines, and the figures who shaped them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="home">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+    <nav class="nav-menu" data-nav-menu>
+      <ul class="nav-links">
+        <li><a href="index.html" data-page="home">Home</a></li>
+        <li><a href="explore.html" data-page="explore">Explore</a></li>
+        <li><a href="timeline.html" data-page="timeline">Timeline</a></li>
+        <li><a href="civilizations.html" data-page="civilizations">Civilizations</a></li>
+        <li><a href="figures.html" data-page="figures">Figures</a></li>
+        <li><a href="quizzes.html" data-page="quizzes">Quizzes</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg class="icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="hero-eyebrow">A history platform, told with care</p>
+        <h1>History,<br>beautifully told.</h1>
+        <p class="lede">Chronicle brings together the empires, thinkers, and turning points that shaped our world — researched, organized, and presented like a magazine you'll actually want to read.</p>
+        <div class="hero-actions">
+          <a href="explore.html" class="btn btn-primary">Explore History</a>
+          <a href="timeline.html" class="btn btn-outline">Browse Timeline</a>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="num">30+</div><div class="label">Historical figures</div></div>
+          <div class="stat"><div class="num">19</div><div class="label">Civilizations</div></div>
+          <div class="stat"><div class="num">6</div><div class="label">Eras covered</div></div>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true"><span class="hero-art-glyph">C</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Featured</p>
+          <h2>Stories worth your time</h2>
+        </div>
+        <a href="explore.html" class="link-more">View all stories</a>
+      </div>
+      <div class="card-grid" id="featured-stories"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Explore</p>
+          <h2>Four eras, one story</h2>
+        </div>
+      </div>
+      <div class="era-grid">
+        <a class="era-card" href="timeline.html#ancient">
+          <p class="era-num">Ancient World</p>
+          <h3>Foundations</h3>
+          <p>Egypt, early China, and the first cities that wrote history down.</p>
+        </a>
+        <a class="era-card" href="timeline.html#medieval">
+          <p class="era-num">Medieval World</p>
+          <h3>Empires of faith and trade</h3>
+          <p>Mali, the Mongols, Byzantium, and the routes that connected them.</p>
+        </a>
+        <a class="era-card" href="timeline.html#early-modern">
+          <p class="era-num">Early Modern Era</p>
+          <h3>Renaissance and reach</h3>
+          <p>New art, new science, and empires spanning oceans.</p>
+        </a>
+        <a class="era-card" href="timeline.html#modern">
+          <p class="era-num">Modern History</p>
+          <h3>Revolution and independence</h3>
+          <p>Nations formed, freed, and remade across two centuries.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">People</p>
+          <h2>Featured figures</h2>
+        </div>
+        <a href="figures.html" class="link-more">Browse all figures</a>
+      </div>
+      <div class="card-grid" id="featured-figures"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Chronology</p>
+          <h2>Moments that mattered</h2>
+        </div>
+        <a href="timeline.html" class="link-more">See the full timeline</a>
+      </div>
+      <div class="timeline" id="timeline-preview"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Civilizations</p>
+          <h2>Empires worth knowing</h2>
+        </div>
+        <a href="civilizations.html" class="link-more">Browse all civilizations</a>
+      </div>
+      <div class="card-grid" id="featured-civilizations"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head" style="align-items:center;">
+        <div>
+          <p class="section-kicker">Test yourself</p>
+          <h2>How well do you know the past?</h2>
+          <p class="muted" style="margin-top:10px;">Twelve questions spanning six continents and three thousand years.</p>
+        </div>
+        <a href="quizzes.html" class="btn btn-primary">Take the Quiz</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+        <p class="footer-tagline">History, beautifully told.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="explore.html">Explore</a></li>
+        <li><a href="timeline.html">Timeline</a></li>
+        <li><a href="civilizations.html">Civilizations</a></li>
+        <li><a href="figures.html">Figures</a></li>
+        <li><a href="quizzes.html">Quizzes</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </div>
+    <div class="footer-bottom">&copy; <span data-current-year>2026</span> Chronicle. History, beautifully told.</div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const featuredStoryIds = ["gold-of-mali", "mongol-conquest", "renaissance-rebirth"];
+    const stories = getExploreArticles().filter(a => featuredStoryIds.includes(a.id));
+    document.getElementById("featured-stories").innerHTML = stories.map(a => `
+      <article class="card">
+        <div class="card-media"><img src="${makePlateImage(a.title, a.id)}" alt="${escapeHtml(a.title)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(a.title)}','${a.id}')"></div>
+        <div class="card-body">
+          <p class="card-eyebrow">${escapeHtml(a.category)}</p>
+          <h3>${escapeHtml(a.title)}</h3>
+          <p>${escapeHtml(a.description)}</p>
+          <div class="card-meta"><span>${escapeHtml(a.era)}</span><span>&middot;</span><span>${escapeHtml(a.region)}</span></div>
+        </div>
+      </article>
+    `).join("");
+
+    const featuredFigureIds = ["mansa-musa", "julius-caesar", "genghis-khan", "hatshepsut"];
+    const figures = getHistoricalFigures().filter(f => featuredFigureIds.includes(f.id));
+    document.getElementById("featured-figures").innerHTML = figures.map(f => `
+      <article class="card figure-card">
+        <div class="card-media"><img src="${makePlateImage(f.name, f.id)}" alt="${escapeHtml(f.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(f.name)}','${f.id}')"></div>
+        <div class="card-body">
+          <p class="card-eyebrow">${escapeHtml(f.period)} &middot; ${escapeHtml(f.region)}</p>
+          <h3>${escapeHtml(f.name)}</h3>
+          <p>${escapeHtml(f.description)}</p>
+          <div class="card-meta"><span>${escapeHtml(f.date)}</span></div>
+        </div>
+      </article>
+    `).join("");
+
+    const previewEventIds = ["mali-empire-founded", "genghis-khan-unites-mongols", "columbus-voyage", "french-revolution"];
+    const events = getTimelineEvents().filter(e => previewEventIds.includes(e.id));
+    document.getElementById("timeline-preview").innerHTML = events.map(e => `
+      <div class="timeline-item">
+        <p class="timeline-date">${escapeHtml(e.date)}</p>
+        <h3>${escapeHtml(e.title)}</h3>
+        <p class="muted">${escapeHtml(e.description)}</p>
+        <div class="card-meta"><span class="tag">${escapeHtml(e.era)}</span><span>${escapeHtml(e.region)}</span></div>
+      </div>
+    `).join("");
+
+    const featuredCivIds = ["mali-empire", "roman-empire", "mongol-empire", "inca"];
+    const civs = getCivilizations().filter(c => featuredCivIds.includes(c.id));
+    document.getElementById("featured-civilizations").innerHTML = civs.map(c => `
+      <article class="card civ-card">
+        <div class="card-media"><img src="${makePlateImage(c.name, c.id)}" alt="${escapeHtml(c.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(c.name)}','${c.id}')"></div>
+        <div class="card-body">
+          <p class="card-eyebrow">${escapeHtml(c.region)} &middot; ${escapeHtml(c.period)}</p>
+          <h3>${escapeHtml(c.name)}</h3>
+          <p>${escapeHtml(c.description)}</p>
+        </div>
+      </article>
+    `).join("");
+  });
+</script>
+</body>
+</html>

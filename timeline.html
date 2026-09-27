@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timeline — Chronicle</title>
+<meta name="description" content="An interactive timeline of pivotal moments in history, from the ancient world to the contemporary era.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="timeline">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+    <nav class="nav-menu" data-nav-menu>
+      <ul class="nav-links">
+        <li><a href="index.html" data-page="home">Home</a></li>
+        <li><a href="explore.html" data-page="explore">Explore</a></li>
+        <li><a href="timeline.html" data-page="timeline">Timeline</a></li>
+        <li><a href="civilizations.html" data-page="civilizations">Civilizations</a></li>
+        <li><a href="figures.html" data-page="figures">Figures</a></li>
+        <li><a href="quizzes.html" data-page="quizzes">Quizzes</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg class="icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" style="padding-bottom:40px;">
+    <div class="container">
+      <p class="hero-eyebrow">Chronology</p>
+      <h1 style="font-size:clamp(36px,5vw,56px);">The Timeline</h1>
+      <p class="lede">Thirty-two turning points, ordered from the ancient world to the present, drawn from every continent.</p>
+    </div>
+  </section>
+
+  <section class="container" style="padding-bottom:90px;">
+    <div class="controls-bar">
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" class="search-input" id="timeline-search" placeholder="Search events, civilizations, regions..." aria-label="Search timeline">
+        </div>
+      </div>
+      <div class="filter-groups">
+        <div class="filter-group">
+          <span class="filter-group-label">Era</span>
+          <div class="chip-row" id="era-filters"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-row">
+      <p class="results-count"><strong id="result-number">0</strong> <span id="result-label">events</span></p>
+      <button class="clear-filters-btn" id="clear-filters">Clear filters</button>
+    </div>
+
+    <div class="timeline" id="timeline-results"></div>
+    <div class="empty-state" id="timeline-empty" hidden>
+      <h3>No events found</h3>
+      <p>Try another name, place, empire, period, or keyword.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+        <p class="footer-tagline">History, beautifully told.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="explore.html">Explore</a></li>
+        <li><a href="timeline.html">Timeline</a></li>
+        <li><a href="civilizations.html">Civilizations</a></li>
+        <li><a href="figures.html">Figures</a></li>
+        <li><a href="quizzes.html">Quizzes</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </div>
+    <div class="footer-bottom">&copy; <span data-current-year>2026</span> Chronicle. History, beautifully told.</div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const eraOrder = ["Ancient", "Classical", "Medieval", "Early Modern", "Modern", "Contemporary"];
+  const events = getTimelineEvents().slice().sort((a, b) => eraOrder.indexOf(a.era) - eraOrder.indexOf(b.era));
+  const state = { query: "", era: "All" };
+  const eras = ["All", ...eraOrder];
+
+  function renderChips() {
+    const el = document.getElementById("era-filters");
+    el.innerHTML = eras.map(opt => `<button class="chip ${state.era === opt ? "is-active" : ""}" data-value="${escapeHtml(opt)}">${escapeHtml(opt)}</button>`).join("");
+    el.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => { state.era = btn.getAttribute("data-value"); render(); });
+    });
+  }
+
+  function matches(e) {
+    if (state.era !== "All" && e.era !== state.era) return false;
+    return itemMatchesSearch(e, state.query);
+  }
+
+  function render() {
+    renderChips();
+    const q = normalizeSearchText(state.query);
+    let results = events.filter(matches);
+    if (q) results = results.sort((a, b) => getSearchScore(b, q) - getSearchScore(a, q));
+    else results = results.slice().sort((a, b) => eraOrder.indexOf(a.era) - eraOrder.indexOf(b.era));
+
+    document.getElementById("result-number").textContent = results.length;
+    document.getElementById("result-label").textContent = results.length === 1 ? "event" : "events";
+
+    const wrap = document.getElementById("timeline-results");
+    const empty = document.getElementById("timeline-empty");
+
+    if (results.length === 0) {
+      wrap.innerHTML = "";
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+
+    let html = "";
+    let lastEra = null;
+    const groupingActive = !q && state.era === "All";
+    results.forEach(e => {
+      if (groupingActive && e.era !== lastEra) {
+        html += `<h2 class="era-anchor" id="${e.era.toLowerCase().replace(/\s+/g, '-')}">${escapeHtml(e.era)}</h2>`;
+        lastEra = e.era;
+      }
+      html += `
+        <div class="timeline-item">
+          <p class="timeline-date">${escapeHtml(e.date)}</p>
+          <h3>${escapeHtml(e.title)}</h3>
+          <p class="muted">${escapeHtml(e.description)}</p>
+          <div class="card-meta"><span class="tag">${escapeHtml(e.era)}</span><span>${escapeHtml(e.civilization)}</span><span>&middot;</span><span>${escapeHtml(e.region)}</span></div>
+        </div>`;
+    });
+    wrap.innerHTML = html;
+  }
+
+  document.getElementById("timeline-search").addEventListener("input", (e) => { state.query = e.target.value; render(); });
+  document.getElementById("clear-filters").addEventListener("click", () => {
+    state.query = ""; state.era = "All";
+    document.getElementById("timeline-search").value = "";
+    render();
+  });
+
+  render();
+});
+</script>
+</body>
+</html>
