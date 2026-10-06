@@ -17,7 +17,7 @@
       <ul class="nav-links">
         <li><a href="index.html" data-page="home">Home</a></li>
         <li><a href="explore.html" data-page="explore">Explore</a></li>
-        <li><a href="timeline.html" data-page="timeline">Timeline</a></li>
+        <li><a href="timeline.html" data-page="timeline">Events</a></li>
         <li><a href="civilizations.html" data-page="civilizations">Civilizations</a></li>
         <li><a href="figures.html" data-page="figures">Figures</a></li>
         <li><a href="quizzes.html" data-page="quizzes">Quizzes</a></li>
@@ -25,6 +25,9 @@
       </ul>
     </nav>
     <div class="header-actions">
+      <button class="header-search" type="button" data-header-search aria-label="Search Chronicle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </button>
       <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
         <svg class="icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg class="icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -54,7 +57,7 @@
           <div class="stat"><div class="num">6</div><div class="label">Eras covered</div></div>
         </div>
       </div>
-      <div class="hero-art" aria-hidden="true"><span class="hero-art-glyph">C</span></div>
+      <div class="hero-art" aria-hidden="true"><img id="hero-skyline" alt="" loading="eager" style="width:100%;height:100%;object-fit:cover;"></div>
     </div>
   </section>
 
@@ -181,11 +184,14 @@
 <script src="script.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("hero-skyline").src = realImageFor("hero", "chronicle", "History");
+
     const featuredStoryIds = ["gold-of-mali", "mongol-conquest", "renaissance-rebirth"];
     const stories = getExploreArticles().filter(a => featuredStoryIds.includes(a.id));
     document.getElementById("featured-stories").innerHTML = stories.map(a => `
-      <article class="card">
-        <div class="card-media"><img src="${makePlateImage(a.title, a.id)}" alt="${escapeHtml(a.title)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(a.title)}','${a.id}')"></div>
+      <article class="card" data-detail-type="story" data-detail-id="${escapeHtml(a.id)}" tabindex="0" role="link">
+        ${favoriteButton("story", a.id, a.title)}
+        <div class="card-media"><img data-topic-image data-topic="${escapeHtml(a.keywords?.join(" ") || a.category)}" src="${itemImage(a, a.image || fallbackImage)}" alt="${escapeHtml(a.imageAlt || a.title)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(a.title)}','${a.id}')"></div>
         <div class="card-body">
           <p class="card-eyebrow">${escapeHtml(a.category)}</p>
           <h3>${escapeHtml(a.title)}</h3>
@@ -198,8 +204,9 @@
     const featuredFigureIds = ["mansa-musa", "julius-caesar", "genghis-khan", "hatshepsut"];
     const figures = getHistoricalFigures().filter(f => featuredFigureIds.includes(f.id));
     document.getElementById("featured-figures").innerHTML = figures.map(f => `
-      <article class="card figure-card">
-        <div class="card-media"><img src="${makePlateImage(f.name, f.id)}" alt="${escapeHtml(f.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(f.name)}','${f.id}')"></div>
+      <article class="card figure-card" data-detail-type="figure" data-detail-id="${escapeHtml(f.id)}" tabindex="0" role="link">
+        ${favoriteButton("figure", f.id, f.name)}
+        <div class="card-media"><img data-topic-image data-topic="${escapeHtml(f.keywords?.join(" ") || f.region)}" src="${itemImage(f, f.image || fallbackImage)}" alt="${escapeHtml(f.imageAlt || f.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(f.name)}','${f.id}')"></div>
         <div class="card-body">
           <p class="card-eyebrow">${escapeHtml(f.period)} &middot; ${escapeHtml(f.region)}</p>
           <h3>${escapeHtml(f.name)}</h3>
@@ -213,18 +220,23 @@
     const events = getTimelineEvents().filter(e => previewEventIds.includes(e.id));
     document.getElementById("timeline-preview").innerHTML = events.map(e => `
       <div class="timeline-item">
-        <p class="timeline-date">${escapeHtml(e.date)}</p>
-        <h3>${escapeHtml(e.title)}</h3>
-        <p class="muted">${escapeHtml(e.description)}</p>
-        <div class="card-meta"><span class="tag">${escapeHtml(e.era)}</span><span>${escapeHtml(e.region)}</span></div>
+        ${favoriteButton("event", e.id, e.title)}
+        <div class="timeline-thumb"><img data-topic-image data-topic="${escapeHtml(e.civilization || e.region || e.era)}" src="${itemImage(e, e.image || fallbackImage)}" alt="${escapeHtml(e.imageAlt || e.title)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(e.title)}','${e.id}')"></div>
+        <div class="timeline-body">
+          <p class="timeline-date">${escapeHtml(e.date)}</p>
+          <h3>${escapeHtml(e.title)}</h3>
+          <p class="muted">${escapeHtml(e.description)}</p>
+          <div class="card-meta"><span class="tag">${escapeHtml(e.era)}</span><span>${escapeHtml(e.region)}</span></div>
+        </div>
       </div>
     `).join("");
 
     const featuredCivIds = ["mali-empire", "roman-empire", "mongol-empire", "inca"];
     const civs = getCivilizations().filter(c => featuredCivIds.includes(c.id));
     document.getElementById("featured-civilizations").innerHTML = civs.map(c => `
-      <article class="card civ-card">
-        <div class="card-media"><img src="${makePlateImage(c.name, c.id)}" alt="${escapeHtml(c.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(c.name)}','${c.id}')"></div>
+      <article class="card civ-card" data-detail-type="civilization" data-detail-id="${escapeHtml(c.id)}" tabindex="0" role="link">
+        ${favoriteButton("civilization", c.id, c.name)}
+        <div class="card-media"><img data-topic-image data-topic="${escapeHtml(c.keywords?.join(" ") || c.region)}" src="${itemImage(c, c.image || fallbackImage)}" alt="${escapeHtml(c.imageAlt || c.name)}" loading="lazy" onerror="imageOnErrorHandler(this,'${escapeHtml(c.name)}','${c.id}')"></div>
         <div class="card-body">
           <p class="card-eyebrow">${escapeHtml(c.region)} &middot; ${escapeHtml(c.period)}</p>
           <h3>${escapeHtml(c.name)}</h3>

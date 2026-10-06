@@ -6,18 +6,17 @@
 
 /* ----------------------------------------------------------
    IMAGE SYSTEM
-   Every figure/civilization/event gets a generated monogram
-   "plate" image (inline SVG data URI) instead of hotlinked
-   external images, so nothing ever fails to load and the
-   visual language stays consistent across the whole site.
+   Civilization cards use representative Wikimedia Commons
+   photographs. The generated plates remain as a local fallback
+   so a card still has artwork if a remote image is unavailable.
    ---------------------------------------------------------- */
 
 const CHRONICLE_PALETTES = [
-  ["#2B2621", "#B8873C"],
-  ["#332A20", "#C79A4B"],
-  ["#26211D", "#A6813C"],
-  ["#3A2E22", "#D1AA5E"],
-  ["#231F1B", "#BF9450"]
+  ["#241F19", "#B8873C"],
+  ["#2B2420", "#C79A4B"],
+  ["#201B16", "#A6813C"],
+  ["#2E2419", "#D1AA5E"],
+  ["#211C17", "#BF9450"]
 ];
 
 function hashSeed(str) {
@@ -36,26 +35,386 @@ function initialsFromName(name) {
   return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
-function makePlateImage(name, seedKey) {
-  const seed = hashSeed(seedKey || name);
+/* ---- Motif library: silhouette illustrations, drawn around (200,200) ---- */
+
+const CHRONICLE_MOTIFS = {
+  pyramid: (c) => `<path d="M200 90 L310 290 L90 290 Z" fill="${c}"/><path d="M200 90 L255 290 L310 290 Z" fill="${c}" opacity="0.6"/><rect x="150" y="260" width="20" height="30" fill="${c}" opacity="0.85"/>`,
+  mosque: (c) => `<path d="M140 290 V210 Q140 170 200 170 Q260 170 260 210 V290 Z" fill="${c}"/><circle cx="200" cy="150" r="22" fill="${c}"/><rect x="190" y="90" width="20" height="65" fill="${c}"/><circle cx="200" cy="88" r="9" fill="${c}"/><rect x="118" y="250" width="16" height="40" fill="${c}" opacity="0.75"/><rect x="266" y="250" width="16" height="40" fill="${c}" opacity="0.75"/><rect x="118" y="230" width="16" height="16" fill="${c}" opacity="0.6"/><rect x="266" y="230" width="16" height="16" fill="${c}" opacity="0.6"/>`,
+  column: (c) => `<rect x="150" y="120" width="100" height="150" fill="${c}" opacity="0.18"/><rect x="160" y="120" width="14" height="150" fill="${c}"/><rect x="193" y="120" width="14" height="150" fill="${c}"/><rect x="226" y="120" width="14" height="150" fill="${c}"/><rect x="142" y="96" width="116" height="20" fill="${c}"/><rect x="134" y="270" width="132" height="20" fill="${c}"/>`,
+  pediment: (c) => `<path d="M140 180 L200 110 L260 180 Z" fill="${c}"/><rect x="150" y="180" width="12" height="90" fill="${c}"/><rect x="178" y="180" width="12" height="90" fill="${c}"/><rect x="210" y="180" width="12" height="90" fill="${c}"/><rect x="238" y="180" width="12" height="90" fill="${c}"/><rect x="130" y="270" width="140" height="18" fill="${c}"/>`,
+  pagoda: (c) => `<path d="M200 95 L240 130 L160 130 Z" fill="${c}"/><rect x="185" y="130" width="30" height="16" fill="${c}"/><path d="M200 146 L255 178 L145 178 Z" fill="${c}" opacity="0.9"/><rect x="183" y="178" width="34" height="16" fill="${c}"/><path d="M200 194 L270 230 L130 230 Z" fill="${c}" opacity="0.8"/><rect x="178" y="230" width="44" height="60" fill="${c}"/>`,
+  yurt: (c) => `<path d="M130 260 Q130 190 200 185 Q270 190 270 260 Z" fill="${c}"/><rect x="110" y="260" width="180" height="20" fill="${c}"/><path d="M190 185 L200 140 L210 185 Z" fill="${c}"/><rect x="170" y="230" width="60" height="30" fill="${c}" opacity="0.45"/>`,
+  "stepped-pyramid": (c) => `<rect x="110" y="258" width="180" height="32" fill="${c}"/><rect x="130" y="224" width="140" height="30" fill="${c}" opacity="0.92"/><rect x="150" y="190" width="100" height="30" fill="${c}" opacity="0.84"/><rect x="170" y="156" width="60" height="30" fill="${c}" opacity="0.76"/><rect x="188" y="128" width="24" height="24" fill="${c}"/>`,
+  terraces: (c) => `<path d="M80 290 L150 180 L200 240 L240 150 L320 290 Z" fill="${c}" opacity="0.85"/><rect x="95" y="265" width="230" height="10" fill="${c}"/><rect x="115" y="245" width="190" height="8" fill="${c}" opacity="0.7"/><rect x="140" y="225" width="140" height="8" fill="${c}" opacity="0.6"/>`,
+  dome: (c) => `<path d="M140 270 Q140 180 200 180 Q260 180 260 270 Z" fill="${c}"/><rect x="120" y="270" width="160" height="20" fill="${c}"/><rect x="192" y="140" width="16" height="42" fill="${c}"/><circle cx="200" cy="134" r="10" fill="${c}"/>`,
+  castle: (c) => `<rect x="120" y="180" width="160" height="110" fill="${c}"/><rect x="120" y="150" width="24" height="30" fill="${c}"/><rect x="168" y="150" width="24" height="30" fill="${c}"/><rect x="216" y="150" width="24" height="30" fill="${c}"/><rect x="256" y="150" width="24" height="30" fill="${c}"/><rect x="178" y="210" width="44" height="80" fill="${c}" opacity="0.5"/>`,
+  scroll: (c) => `<rect x="130" y="150" width="140" height="110" rx="4" fill="${c}" opacity="0.18"/><rect x="130" y="150" width="140" height="8" rx="4" fill="${c}"/><rect x="130" y="252" width="140" height="8" rx="4" fill="${c}"/><circle cx="130" cy="154" r="13" fill="${c}"/><circle cx="270" cy="154" r="13" fill="${c}"/><circle cx="130" cy="256" r="13" fill="${c}"/><circle cx="270" cy="256" r="13" fill="${c}"/><line x1="152" y1="178" x2="248" y2="178" stroke="${c}" stroke-width="4" opacity="0.6"/><line x1="152" y1="198" x2="248" y2="198" stroke="${c}" stroke-width="4" opacity="0.6"/><line x1="152" y1="218" x2="220" y2="218" stroke="${c}" stroke-width="4" opacity="0.6"/>`,
+  crown: (c) => `<path d="M120 260 L140 160 L180 210 L200 150 L220 210 L260 160 L280 260 Z" fill="${c}"/><rect x="120" y="258" width="160" height="26" fill="${c}"/><circle cx="140" cy="155" r="9" fill="${c}"/><circle cx="200" cy="145" r="10" fill="${c}"/><circle cx="260" cy="155" r="9" fill="${c}"/>`,
+  ship: (c) => `<path d="M100 250 L300 250 L270 290 L130 290 Z" fill="${c}"/><rect x="196" y="110" width="8" height="140" fill="${c}"/><path d="M204 125 L270 230 L204 230 Z" fill="${c}" opacity="0.85"/><path d="M196 140 L140 225 L196 225 Z" fill="${c}" opacity="0.65"/>`,
+  sword: (c) => `<rect x="192" y="100" width="16" height="130" fill="${c}"/><path d="M200 100 L214 130 L186 130 Z" fill="${c}"/><rect x="160" y="222" width="80" height="14" fill="${c}"/><rect x="188" y="236" width="24" height="54" fill="${c}"/>`,
+  shield: (c) => `<path d="M200 100 L270 128 V210 Q270 260 200 292 Q130 260 130 210 V128 Z" fill="${c}"/><path d="M200 130 L240 148 V205 Q240 238 200 262 Q160 238 160 205 V148 Z" fill="${c}" opacity="0.35"/>`,
+  star: (c) => `<path d="M200 95 L220 170 L298 170 L234 215 L258 290 L200 243 L142 290 L166 215 L102 170 L180 170 Z" fill="${c}"/>`,
+  obelisk: (c) => `<path d="M185 290 L185 140 L200 105 L215 140 L215 290 Z" fill="${c}"/><rect x="170" y="280" width="60" height="14" fill="${c}"/>`
+};
+
+const MOTIF_DEFAULT = "scroll";
+
+const CIV_MOTIFS = {
+  "mali-empire": "mosque", "songhai-empire": "mosque", "kingdom-of-ghana": "shield",
+  "ancient-egypt": "pyramid", "great-zimbabwe": "castle", "kingdom-of-kongo": "shield",
+  "roman-empire": "column", "byzantine-empire": "dome", "ancient-greece": "pediment",
+  "medieval-england": "castle", "han-dynasty": "pagoda", "tang-dynasty": "pagoda",
+  "mongol-empire": "yurt", "mughal-empire": "dome", "ancient-china": "pagoda",
+  "maya": "stepped-pyramid", "aztec": "stepped-pyramid", "inca": "terraces", "olmec": "stepped-pyramid"
+};
+
+const CIVILIZATION_IMAGES = {
+  "mali-empire": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "songhai-empire": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Timbuktu-manuscripts-astronomy-mathematics.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "kingdom-of-ghana": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Kingdom_of_Ghana_%26_Trans-Saharan_Trade_about_11th_century.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ancient-egypt": "https://upload.wikimedia.org/wikipedia/commons/a/af/All_Gizah_Pyramids.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "great-zimbabwe": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Great-zim-aerial-looking-West.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "kingdom-of-kongo": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Zimbabwe_Closeup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "roman-empire": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "byzantine-empire": "https://upload.wikimedia.org/wikipedia/commons/2/22/Hagia_Sophia_Mars_2013.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ancient-greece": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Parthenon_from_south_slope.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "medieval-england": "https://upload.wikimedia.org/wikipedia/commons/3/38/Westminster_Abbey_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "han-dynasty": "https://upload.wikimedia.org/wikipedia/commons/2/2d/Great_Wall_of_China_at_Jinshanling-edit.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "tang-dynasty": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Dunhuang Mogao 17.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mongol-empire": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mughal-empire": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Taj_Mahal_in_March_2004.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ancient-china": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Wall_of_China%2C_Badaling.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "maya": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Tikal_Temple_II.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "aztec": "https://upload.wikimedia.org/wikipedia/commons/1/11/Templo_Mayor_in_Mexico-Tenochtitlan_16th_century_%28illustration_1900%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "inca": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Machu_Picchu_Peru_100.jpg/1280px-Machu_Picchu_Peru_100.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "olmec": "https://upload.wikimedia.org/wikipedia/commons/4/49/Olmec_Head.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+};
+
+function civilizationImage(id, name) {
+  const photoId = CIVILIZATION_IMAGES[id];
+  if (!photoId) {
+    const index = Math.abs(hashSeed(String(id || name || "chronicle-civilization"))) % AUTHENTIC_FALLBACKS.length;
+    return AUTHENTIC_FALLBACKS[index];
+  }
+  return photoId;
+}
+
+function realImageFor(type, id, name) {
+  if (type === "civilization") return civilizationImage(id, name);
+  const topicImages = {
+    "mansa-musa": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "hatshepsut": "https://upload.wikimedia.org/wikipedia/commons/3/35/Hatshepsut_Statue.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "julius-caesar": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Statue_of_Julius_Caesar_in_Turin.jpg/1280px-Statue_of_Julius_Caesar_in_Turin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "cleopatra": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Cleopatra_VII_of_Egypt%2C_detail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "genghis-khan": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "confucius": "https://upload.wikimedia.org/wikipedia/commons/8/84/Confucius_Tang_Dynasty.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "napoleon-bonaparte": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Napoleon_at_study.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "akbar": "https://upload.wikimedia.org/wikipedia/commons/5/50/Portrait_of_Akbar_by_Manohar.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "leonardo-da-vinci": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Leonardo_self.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "ramses-ii": "https://upload.wikimedia.org/wikipedia/commons/7/7a/Pharaoh_Ramses_II.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "alexander-the-great": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Alexander_the_Great_mosaic.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "mali-empire-founded": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "genghis-khan-unites-mongols": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "columbus-voyage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Columbus_Taking_Possession.jpg/1280px-Columbus_Taking_Possession.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "french-revolution": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/La_Libert%C3%A9_guidant_le_peuple_-_Eug%C3%A8ne_Delacroix_-_Mus%C3%A9e_du_Louvre_Peintures_RF_129_-_apr%C3%A8s_restauration_2024.jpg/1280px-La_Libert%C3%A9_guidant_le_peuple_-_Eug%C3%A8ne_Delacroix_-_Mus%C3%A9e_du_Louvre_Peintures_RF_129_-_apr%C3%A8s_restauration_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "great-zimbabwe-built": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Great-zim-aerial-looking-West.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "pyramids-giza": "https://upload.wikimedia.org/wikipedia/commons/a/af/All_Gizah_Pyramids.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "mansa-musa-pilgrimage": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "songhai-rise": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Timbuktu-manuscripts-astronomy-mathematics.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "fall-of-rome": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  };
+  if (topicImages[id]) return topicImages[id];
+  const index = Math.abs(hashSeed(String(id || name || "chronicle-topic"))) % AUTHENTIC_FALLBACKS.length;
+  return AUTHENTIC_FALLBACKS[index];
+}
+
+async function topicImageFor(img, subjectName = "") {
+  if (img.src.includes("upload.wikimedia.org")) return;
+  const query = [subjectName || img.alt, "portrait"].filter(Boolean).join(" ");
+  const cacheKey = `chronicle-image:${query}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      img.src = cached;
+      return;
+    }
+    const endpoint = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=1000&format=json&origin=*`;
+    const response = await fetch(endpoint);
+    if (!response.ok) throw new Error(`Image search failed with ${response.status}`);
+    const data = await response.json();
+    const page = data.query && Object.values(data.query.pages || {})[0];
+    const url = page && page.imageinfo && page.imageinfo[0] && (page.imageinfo[0].thumburl || page.imageinfo[0].url);
+    if (!url) return;
+    sessionStorage.setItem(cacheKey, url);
+    img.src = url;
+  } catch (error) {
+    img.dataset.imageSearchError = "true";
+  }
+}
+
+function initTopicImages() {
+  document.querySelectorAll("img[data-topic-image]").forEach(topicImageFor);
+}
+
+function detailUrl(type, id) {
+  return `article.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`;
+}
+
+function getChronicleItem(type, id) {
+  const sources = {
+    civilization: getCivilizations(),
+    figure: getHistoricalFigures(),
+    story: getExploreArticles(),
+    event: getTimelineEvents()
+  };
+  return (sources[type] || []).find(item => item.id === id) || null;
+}
+
+function initDetailLinks() {
+  document.addEventListener("click", event => {
+    const card = event.target.closest("[data-detail-type][data-detail-id]");
+    if (!card || event.target.closest("button, a, input")) return;
+    window.location.href = detailUrl(card.dataset.detailType, card.dataset.detailId);
+  });
+  document.addEventListener("keydown", event => {
+    const card = event.target.closest("[data-detail-type][data-detail-id]");
+    if (card && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      window.location.href = detailUrl(card.dataset.detailType, card.dataset.detailId);
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", initDetailLinks);
+document.addEventListener("DOMContentLoaded", initTopicImages);
+
+const FIGURE_MOTIFS = {
+  "mansa-musa": "crown", "sundiata-keita": "shield", "askia-muhammad": "mosque",
+  "shaka-zulu": "shield", "queen-nzinga": "shield", "hatshepsut": "pyramid",
+  "ramses-ii": "pyramid", "hannibal": "sword", "cleopatra": "obelisk",
+  "julius-caesar": "column", "alexander-the-great": "sword", "charlemagne": "castle",
+  "leonardo-da-vinci": "scroll", "napoleon-bonaparte": "sword", "joan-of-arc": "sword",
+  "elizabeth-i": "crown", "galileo-galilei": "scroll", "genghis-khan": "yurt",
+  "kublai-khan": "pagoda", "confucius": "scroll", "ashoka": "crown",
+  "qin-shi-huang": "pagoda", "akbar": "dome", "sun-tzu": "sword",
+  "saladin": "mosque", "ibn-sina": "scroll", "ibn-khaldun": "scroll",
+  "simon-bolivar": "sword", "george-washington": "column", "harriet-tubman": "star",
+  "tecumseh": "shield", "suleiman-the-magnificent": "dome", "marco-polo": "ship"
+};
+
+const EXPLORE_MOTIFS = {
+  "gold-of-mali": "crown", "rise-of-rome": "column", "egypt-nile": "pyramid",
+  "mongol-conquest": "yurt", "renaissance-rebirth": "scroll", "songhai-scholars": "mosque",
+  "silk-road-exchange": "pagoda", "inca-roads": "terraces", "byzantine-survival": "dome",
+  "aztec-capital": "stepped-pyramid", "zulu-military": "shield", "age-of-independence": "sword"
+};
+
+const TIMELINE_MOTIFS = {
+  "pyramids-giza": "pyramid", "olmec-rise": "stepped-pyramid", "confucius-teaching": "scroll",
+  "founding-of-rome-republic": "column", "alexander-conquests": "sword", "qin-unification": "pagoda",
+  "punic-wars": "sword", "silk-road-opens": "pagoda", "fall-of-rome": "column",
+  "kingdom-of-ghana-rise": "shield", "charlemagne-crowned": "castle", "great-zimbabwe-built": "castle",
+  "mali-empire-founded": "mosque", "genghis-khan-unites-mongols": "yurt", "magna-carta": "castle",
+  "mansa-musa-pilgrimage": "crown", "saladin-retakes-jerusalem": "mosque", "byzantine-hagia-sophia": "dome",
+  "songhai-rise": "mosque", "columbus-voyage": "ship", "inca-empire-height": "terraces",
+  "renaissance-florence": "scroll", "mughal-empire-founded": "dome", "spanish-armada": "ship",
+  "shaka-zulu-kingdom": "shield", "american-independence": "star", "french-revolution": "sword",
+  "bolivar-independence": "sword", "harriet-tubman-railroad": "star", "world-war-two-ends": "star",
+  "african-independence-wave": "shield", "fall-of-berlin-wall": "castle"
+};
+
+function motifKeyFor(id, fallbackKey) {
+  return CIV_MOTIFS[id] || FIGURE_MOTIFS[id] || EXPLORE_MOTIFS[id] || TIMELINE_MOTIFS[id] || fallbackKey || MOTIF_DEFAULT;
+}
+
+function makePlateImage(name, seedKey, motifKey) {
+  const key = seedKey || name;
+  const seed = hashSeed(key);
   const [bg, accent] = CHRONICLE_PALETTES[seed % CHRONICLE_PALETTES.length];
+  const motif = CHRONICLE_MOTIFS[motifKeyFor(key, motifKey)] || CHRONICLE_MOTIFS[MOTIF_DEFAULT];
   const initials = escapeHtml(initialsFromName(name));
-  const ringOffset = 14 + (seed % 10);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+    <defs>
+      <radialGradient id="g${seed}" cx="35%" cy="28%" r="80%">
+        <stop offset="0%" stop-color="${accent}" stop-opacity="0.22"/>
+        <stop offset="60%" stop-color="${bg}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
     <rect width="400" height="400" fill="${bg}"/>
-    <circle cx="200" cy="200" r="${150 - ringOffset}" fill="none" stroke="${accent}" stroke-width="1.5" opacity="0.55"/>
-    <circle cx="200" cy="200" r="${168 - ringOffset}" fill="none" stroke="${accent}" stroke-width="1" opacity="0.3"/>
-    <text x="200" y="222" font-family="Playfair Display, Georgia, serif" font-size="108" fill="${accent}" text-anchor="middle" font-weight="600">${initials}</text>
+    <rect width="400" height="400" fill="url(#g${seed})"/>
+    <circle cx="200" cy="200" r="172" fill="none" stroke="${accent}" stroke-width="1" opacity="0.35"/>
+    <g opacity="0.92">${motif(accent)}</g>
+    <text x="200" y="352" font-family="Inter, sans-serif" font-size="15" letter-spacing="2" fill="${accent}" text-anchor="middle" font-weight="600" opacity="0.85">${initials}</text>
   </svg>`;
   return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 }
 
-const fallbackImage = makePlateImage("Chronicle", "chronicle-fallback");
-
-function imageOnErrorHandler(imgEl, name, seedKey) {
-  imgEl.onerror = null;
-  imgEl.src = makePlateImage(name || "Chronicle", seedKey || name || "fallback");
+/* A wider illustrated "skyline" composition for the homepage hero —
+   silhouettes of several civilizations' architecture sharing one
+   horizon line, rendered the same zero-dependency way as the plates. */
+function makeHeroSkyline() {
+  const accent = "#B8873C";
+  const accentDim = "#8C6A33";
+  const bg = "#201B16";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMax slice">
+    <defs>
+      <radialGradient id="heroGlow" cx="38%" cy="22%" r="75%">
+        <stop offset="0%" stop-color="${accent}" stop-opacity="0.28"/>
+        <stop offset="65%" stop-color="${bg}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="600" height="500" fill="${bg}"/>
+    <rect width="600" height="500" fill="url(#heroGlow)"/>
+    <circle cx="430" cy="110" r="58" fill="${accent}" opacity="0.18"/>
+    <circle cx="430" cy="110" r="36" fill="${accent}" opacity="0.5"/>
+    <!-- pagoda -->
+    <g opacity="0.9" fill="${accentDim}">
+      <path d="M90 300 L120 325 L60 325 Z"/><rect x="80" y="325" width="20" height="10"/>
+      <path d="M90 335 L135 360 L45 360 Z"/><rect x="77" y="360" width="26" height="10"/>
+      <path d="M90 370 L145 400 L35 400 Z"/><rect x="70" y="400" width="40" height="60"/>
+    </g>
+    <!-- column temple -->
+    <g opacity="0.95" fill="${accent}">
+      <path d="M160 330 L205 290 L250 330 Z"/>
+      <rect x="168" y="330" width="10" height="100"/>
+      <rect x="190" y="330" width="10" height="100"/>
+      <rect x="212" y="330" width="10" height="100"/>
+      <rect x="232" y="330" width="10" height="100"/>
+      <rect x="156" y="330" width="100" height="12"/>
+      <rect x="156" y="428" width="100" height="14"/>
+    </g>
+    <!-- pyramid -->
+    <g opacity="0.85" fill="${accentDim}">
+      <path d="M320 460 L380 320 L440 460 Z"/>
+      <path d="M380 320 L410 460 L440 460 Z" opacity="0.6"/>
+    </g>
+    <!-- dome -->
+    <g opacity="1" fill="${accent}">
+      <path d="M440 440 Q440 370 490 370 Q540 370 540 440 Z"/>
+      <rect x="415" y="440" width="150" height="16"/>
+      <rect x="480" y="330" width="10" height="40"/>
+      <circle cx="485" cy="324" r="7"/>
+    </g>
+    <!-- ground line -->
+    <rect x="0" y="456" width="600" height="2" fill="${accent}" opacity="0.4"/>
+  </svg>`;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 }
+
+const fallbackImage = "https://commons.wikimedia.org/wiki/Special:FilePath/Great_Zimbabwe_Closeup.jpg?width=1280";
+
+const AUTHENTIC_FALLBACKS = [
+  "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Zimbabwe_Closeup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "https://upload.wikimedia.org/wikipedia/commons/a/a0/Great_Pyramid_of_Giza.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "https://upload.wikimedia.org/wikipedia/commons/5/50/Colosseum_in_Rome.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "https://upload.wikimedia.org/wikipedia/commons/7/7d/Tikal.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Zimbabwe_Closeup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/YuanEmperorAlbumGenghisPortrait.jpg/1280px-YuanEmperorAlbumGenghisPortrait.jpg"
+];
+
+function imageOnErrorHandler(imgEl, name) {
+  imgEl.onerror = null;
+  imgEl.dataset.imageSourceFailed = "true";
+  imgEl.removeAttribute("src");
+  topicImageFor(imgEl, name);
+}
+
+const CHRONICLE_STORAGE_KEY = "chronicle-preferences";
+
+function readChroniclePreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHRONICLE_STORAGE_KEY)) || {};
+    return {
+      favorites: Array.isArray(saved.favorites) ? saved.favorites : [],
+      quiz: { attempts: 0, best: 0, last: 0, ...(saved.quiz || {}) }
+    };
+  } catch (error) {
+    return { favorites: [], quiz: { attempts: 0, best: 0, last: 0 } };
+  }
+}
+
+function writeChroniclePreferences(preferences) {
+  localStorage.setItem(CHRONICLE_STORAGE_KEY, JSON.stringify(preferences));
+}
+
+function favoriteKey(type, id) {
+  return `${type}:${id}`;
+}
+
+function isFavorite(type, id) {
+  return readChroniclePreferences().favorites.includes(favoriteKey(type, id));
+}
+
+function favoriteButton(type, id, label) {
+  const active = isFavorite(type, id);
+  return `<button class="favorite-btn${active ? " is-favorite" : ""}" data-favorite-type="${escapeHtml(type)}" data-favorite-id="${escapeHtml(id)}" aria-label="${active ? "Remove" : "Save"} ${escapeHtml(label)} ${active ? "from" : "to"} favorites" aria-pressed="${active}">&#9733;</button>`;
+}
+
+function updateFavoriteButtons() {
+  document.querySelectorAll("[data-favorite-type][data-favorite-id]").forEach(button => {
+    const active = isFavorite(button.dataset.favoriteType, button.dataset.favoriteId);
+    button.classList.toggle("is-favorite", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.setAttribute("aria-label", `${active ? "Remove" : "Save"} ${button.dataset.favoriteId} ${active ? "from" : "to"} favorites`);
+  });
+  const count = readChroniclePreferences().favorites.length;
+  document.querySelectorAll("[data-favorites-count]").forEach(el => { el.textContent = count; });
+  const list = document.querySelector("[data-favorites-list]");
+  const empty = document.querySelector("[data-favorites-empty]");
+  if (list) {
+    const items = [...new Map([...document.querySelectorAll("[data-favorite-type][data-favorite-id]")]
+      .filter(button => isFavorite(button.dataset.favoriteType, button.dataset.favoriteId))
+      .map(button => [favoriteKey(button.dataset.favoriteType, button.dataset.favoriteId), button.dataset.favoriteId.replace(/-/g, " ")])).values()];
+    list.innerHTML = items.map(item => `<p class="favorite-item">${escapeHtml(item)}</p>`).join("");
+    if (empty) empty.hidden = items.length > 0;
+  }
+}
+
+function initChroniclePersonalization() {
+  const actions = document.querySelector(".header-actions");
+  if (actions && !actions.querySelector("[data-favorites-toggle]")) {
+    const button = document.createElement("button");
+    button.className = "favorites-toggle";
+    button.type = "button";
+    button.setAttribute("data-favorites-toggle", "");
+    button.setAttribute("aria-label", "View favorites");
+    button.innerHTML = "&#9733;<span data-favorites-count>0</span>";
+    actions.insertBefore(button, actions.firstChild);
+  }
+
+  document.addEventListener("click", event => {
+    const favorite = event.target.closest("[data-favorite-type][data-favorite-id]");
+    if (favorite) {
+      const preferences = readChroniclePreferences();
+      const key = favoriteKey(favorite.dataset.favoriteType, favorite.dataset.favoriteId);
+      preferences.favorites = preferences.favorites.includes(key)
+        ? preferences.favorites.filter(item => item !== key)
+        : [...preferences.favorites, key];
+      writeChroniclePreferences(preferences);
+      updateFavoriteButtons();
+      event.preventDefault();
+      return;
+    }
+    const toggle = event.target.closest("[data-favorites-toggle]");
+    if (toggle) {
+      const panel = document.querySelector("[data-favorites-panel]");
+      if (panel) panel.toggleAttribute("hidden");
+    }
+  });
+
+  const panel = document.createElement("aside");
+  panel.className = "favorites-panel";
+  panel.setAttribute("data-favorites-panel", "");
+  panel.hidden = true;
+  panel.innerHTML = `<div class="favorites-panel-head"><h2>Saved items</h2><button type="button" class="favorites-close" aria-label="Close favorites">&times;</button></div><p class="muted" data-favorites-empty>Your saved items appear here.</p><div data-favorites-list></div>`;
+  document.body.appendChild(panel);
+  panel.addEventListener("click", event => {
+    if (event.target.closest(".favorites-close")) panel.hidden = true;
+  });
+  updateFavoriteButtons();
+}
+
+document.addEventListener("DOMContentLoaded", initChroniclePersonalization);
 
 /* ----------------------------------------------------------
    TEXT / SEARCH UTILITIES
@@ -176,8 +535,59 @@ const historicalFigures = [
   { id: "marco-polo", name: "Marco Polo", region: "Europe", period: "Medieval", date: "1254 – 1324", description: "Venetian merchant and explorer whose account of his travels along the Silk Road to the court of Kublai Khan introduced Asia to European readers.", keywords: ["Venice", "Silk Road", "China", "trade", "exploration"] }
 ];
 
+const HISTORICAL_FIGURE_IMAGES = {
+  "mansa-musa": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "sundiata-keita": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "askia-muhammad": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Timbuktu-manuscripts-astronomy-mathematics.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "shaka-zulu": "https://upload.wikimedia.org/wikipedia/commons/8/83/Shaka_Zulu.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "queen-nzinga": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Nzinga_mbande.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "hatshepsut": "https://upload.wikimedia.org/wikipedia/commons/3/35/Hatshepsut_Statue.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ramses-ii": "https://upload.wikimedia.org/wikipedia/commons/7/7a/Pharaoh_Ramses_II.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "hannibal": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Hannibal.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "julius-caesar": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Statue_of_Julius_Caesar_in_Turin.jpg/1280px-Statue_of_Julius_Caesar_in_Turin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "alexander-the-great": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Alexander_the_Great_mosaic.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "charlemagne": "https://upload.wikimedia.org/wikipedia/commons/9/95/Charlemagne.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "leonardo-da-vinci": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Leonardo_self.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "napoleon-bonaparte": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/La_Libert%C3%A9_guidant_le_peuple_-_Eug%C3%A8ne_Delacroix_-_Mus%C3%A9e_du_Louvre_Peintures_RF_129_-_apr%C3%A8s_restauration_2024.jpg/1280px-La_Libert%C3%A9_guidant_le_peuple_-_Eug%C3%A8ne_Delacroix_-_Mus%C3%A9e_du_Louvre_Peintures_RF_129_-_apr%C3%A8s_restauration_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "joan-of-arc": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Joan_of_Arc.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "elizabeth-i": "https://upload.wikimedia.org/wikipedia/commons/5/52/Elizabeth_I_Red_Portrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "galileo-galilei": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Galileo_Galilei_1640.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "genghis-khan": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "kublai-khan": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "confucius": "https://upload.wikimedia.org/wikipedia/commons/8/84/Confucius_Tang_Dynasty.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ashoka": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Ashoka_Column.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "qin-shi-huang": "https://upload.wikimedia.org/wikipedia/commons/6/6b/QinShiHuang.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "akbar": "https://upload.wikimedia.org/wikipedia/commons/5/50/Portrait_of_Akbar_by_Manohar.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "sun-tzu": "https://upload.wikimedia.org/wikipedia/commons/8/86/Sun_Tzu.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "saladin": "https://upload.wikimedia.org/wikipedia/commons/1/13/Saladin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ibn-sina": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Avicenna.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ibn-khaldun": "https://upload.wikimedia.org/wikipedia/commons/7/7a/Ibn_Khaldun.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "simon-bolivar": "https://upload.wikimedia.org/wikipedia/commons/2/25/Simon_Bolivar.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "george-washington": "https://upload.wikimedia.org/wikipedia/commons/3/31/George_Washington_by_Gilbert_Stuart.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "harriet-tubman": "https://upload.wikimedia.org/wikipedia/commons/1/13/Harriet_Tubman.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "tecumseh": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Tecumseh.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "cleopatra": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Cleopatra_VII_of_Egypt%2C_detail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "suleiman-the-magnificent": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Suleiman_the_Magnificent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "marco-polo": "https://upload.wikimedia.org/wikipedia/commons/4/48/Marco_Polo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+};
+
+const HISTORICAL_FIGURE_ALT = Object.fromEntries(Object.entries(HISTORICAL_FIGURE_IMAGES).map(([key, value]) => [key, `Historical depiction associated with ${key.replace(/-/g, " ")}`]));
+
+historicalFigures.forEach(item => {
+  item.image = HISTORICAL_FIGURE_IMAGES[item.id] || "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original";
+  item.imageAlt = HISTORICAL_FIGURE_ALT[item.id] || `Historical image of ${item.name}`;
+});
+
 function getHistoricalFigures() {
   return historicalFigures;
+}
+
+function itemImage(item, fallback = fallbackImage) {
+  return item && item.image ? item.image : fallback;
+}
+
+function itemImageAlt(item, fallback = "Historical image") {
+  return item && item.imageAlt ? item.imageAlt : fallback;
 }
 
 /* ----------------------------------------------------------
@@ -205,6 +615,33 @@ const civilizations = [
   { id: "inca", name: "Inca Empire", region: "Americas", period: "1438 – 1533", description: "The largest empire in pre-Columbian America, linked by an extraordinary road system through the Andes mountains.", achievements: ["Over 24,000 miles of mountain road network", "Advanced terrace farming techniques", "Precision stonework at sites like Machu Picchu"] },
   { id: "olmec", name: "Olmec Civilization", region: "Americas", period: "c. 1200 – 400 BCE", description: "Considered Mesoamerica's earliest major civilization, laying cultural groundwork later built upon by the Maya and Aztec.", achievements: ["Colossal carved stone heads", "Early Mesoamerican calendar concepts", "Long-distance trade in jade and obsidian"] }
 ];
+
+const CIVILIZATION_IMAGES_MAP = {
+  "mali-empire": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "songhai-empire": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Timbuktu-manuscripts-astronomy-mathematics.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "kingdom-of-ghana": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Kingdom_of_Ghana_%26_Trans-Saharan_Trade_about_11th_century.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ancient-egypt": "https://upload.wikimedia.org/wikipedia/commons/a/af/All_Gizah_Pyramids.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "great-zimbabwe": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Great-zim-aerial-looking-West.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "kingdom-of-kongo": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Zimbabwe_Closeup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "roman-empire": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "byzantine-empire": "https://upload.wikimedia.org/wikipedia/commons/2/22/Hagia_Sophia_Mars_2013.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ancient-greece": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Parthenon_from_south_slope.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "medieval-england": "https://upload.wikimedia.org/wikipedia/commons/3/38/Westminster_Abbey_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "han-dynasty": "https://upload.wikimedia.org/wikipedia/commons/2/2d/Great_Wall_of_China_at_Jinshanling-edit.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "tang-dynasty": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Dunhuang Mogao 17.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mongol-empire": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mughal-empire": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Taj_Mahal_in_March_2004.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "ancient-china": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Wall_of_China%2C_Badaling.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "maya": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Tikal_Temple_II.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "aztec": "https://upload.wikimedia.org/wikipedia/commons/1/11/Templo_Mayor_in_Mexico-Tenochtitlan_16th_century_%28illustration_1900%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "inca": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Machu_Picchu_Peru_100.jpg/1280px-Machu_Picchu_Peru_100.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "olmec": "https://upload.wikimedia.org/wikipedia/commons/4/49/Olmec_Head.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+};
+
+civilizations.forEach(item => {
+  item.image = CIVILIZATION_IMAGES_MAP[item.id] || "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original";
+  item.imageAlt = `Historical image of ${item.name}`;
+});
 
 function getCivilizations() {
   return civilizations;
@@ -249,6 +686,46 @@ const timelineEvents = [
   { id: "fall-of-berlin-wall", title: "Fall of the Berlin Wall", date: "1989", era: "Contemporary", civilization: "Roman Empire", region: "Europe", description: "The Berlin Wall falls, symbolizing the end of the Cold War division between Eastern and Western Europe." }
 ];
 
+const TIMELINE_EVENT_IMAGES = {
+  "pyramids-giza": "https://upload.wikimedia.org/wikipedia/commons/a/af/All_Gizah_Pyramids.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "olmec-rise": "https://upload.wikimedia.org/wikipedia/commons/4/49/Olmec_Head.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "confucius-teaching": "https://upload.wikimedia.org/wikipedia/commons/8/84/Confucius_Tang_Dynasty.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "founding-of-rome-republic": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "alexander-conquests": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Alexander_the_Great_mosaic.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "qin-unification": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Wall_of_China%2C_Badaling.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "punic-wars": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Statue_of_Julius_Caesar_in_Turin.jpg/1280px-Statue_of_Julius_Caesar_in_Turin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "silk-road-opens": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Dunhuang Mogao 17.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "fall-of-rome": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "kingdom-of-ghana-rise": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Kingdom_of_Ghana_%26_Trans-Saharan_Trade_about_11th_century.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "charlemagne-crowned": "https://upload.wikimedia.org/wikipedia/commons/9/95/Charlemagne.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "great-zimbabwe-built": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Great-zim-aerial-looking-West.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mali-empire-founded": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "genghis-khan-unites-mongols": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "magna-carta": "https://upload.wikimedia.org/wikipedia/commons/3/38/Westminster_Abbey_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mansa-musa-pilgrimage": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "saladin-retakes-jerusalem": "https://upload.wikimedia.org/wikipedia/commons/1/13/Saladin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "byzantine-hagia-sophia": "https://upload.wikimedia.org/wikipedia/commons/2/22/Hagia_Sophia_Mars_2013.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "songhai-rise": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Timbuktu-manuscripts-astronomy-mathematics.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "columbus-voyage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Columbus_Taking_Possession.jpg/1280px-Columbus_Taking_Possession.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "inca-empire-height": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Machu_Picchu_Peru_100.jpg/1280px-Machu_Picchu_Peru_100.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "renaissance-florence": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Leonardo_self.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mughal-empire-founded": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Taj_Mahal_in_March_2004.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "spanish-armada": "https://upload.wikimedia.org/wikipedia/commons/5/52/Elizabeth_I_Red_Portrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "shaka-zulu-kingdom": "https://upload.wikimedia.org/wikipedia/commons/8/83/Shaka_Zulu.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "american-independence": "https://upload.wikimedia.org/wikipedia/commons/3/31/George_Washington_by_Gilbert_Stuart.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "french-revolution": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/La_Libert%C3%A9_guidant_le_peuple_-_Eug%C3%A8ne_Delacroix_-_Mus%C3%A9e_du_Louvre_Peintures_RF_129_-_apr%C3%A8s_restauration_2024.jpg/1280px-La_Libert%C3%A9_guidant_le_peuple_-_Eug%C3%A8ne_Delacroix_-_Mus%C3%A9e_du_Louvre_Peintures_RF_129_-_apr%C3%A8s_restauration_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "bolivar-independence": "https://upload.wikimedia.org/wikipedia/commons/2/25/Simon_Bolivar.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "harriet-tubman-railroad": "https://upload.wikimedia.org/wikipedia/commons/1/13/Harriet_Tubman.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "world-war-two-ends": "https://upload.wikimedia.org/wikipedia/commons/6/6d/World_War_II_1945.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "african-independence-wave": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Great_Zimbabwe_Closeup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "fall-of-berlin-wall": "https://upload.wikimedia.org/wikipedia/commons/8/80/Berlin_Wall.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+};
+
+timelineEvents.forEach(item => {
+  item.image = TIMELINE_EVENT_IMAGES[item.id] || "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original";
+  item.imageAlt = `Historical image related to ${item.title}`;
+});
+
 function getTimelineEvents() {
   return timelineEvents;
 }
@@ -272,8 +749,37 @@ const exploreArticles = [
   { id: "age-of-independence", title: "Breaking Empire: Latin America's Independence Era", category: "Revolutions", era: "Modern", region: "Americas", description: "How Bolívar and a generation of revolutionaries freed much of South America from colonial rule.", keywords: ["Bolivar", "independence", "South America", "revolution"] }
 ];
 
+const EXPLORE_ARTICLE_IMAGES = {
+  "gold-of-mali": "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "rise-of-rome": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "egypt-nile": "https://upload.wikimedia.org/wikipedia/commons/a/af/All_Gizah_Pyramids.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "mongol-conquest": "https://upload.wikimedia.org/wikipedia/commons/3/35/YuanEmperorAlbumGenghisPortrait.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "renaissance-rebirth": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Leonardo_self.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "songhai-scholars": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Timbuktu-manuscripts-astronomy-mathematics.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "silk-road-exchange": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Dunhuang Mogao 17.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "inca-roads": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Machu_Picchu_Peru_100.jpg/1280px-Machu_Picchu_Peru_100.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "byzantine-survival": "https://upload.wikimedia.org/wikipedia/commons/2/22/Hagia_Sophia_Mars_2013.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "aztec-capital": "https://upload.wikimedia.org/wikipedia/commons/1/11/Templo_Mayor_in_Mexico-Tenochtitlan_16th_century_%28illustration_1900%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "zulu-military": "https://upload.wikimedia.org/wikipedia/commons/8/83/Shaka_Zulu.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "age-of-independence": "https://upload.wikimedia.org/wikipedia/commons/2/25/Simon_Bolivar.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+};
+
+exploreArticles.forEach(item => {
+  item.image = EXPLORE_ARTICLE_IMAGES[item.id] || "https://upload.wikimedia.org/wikipedia/commons/4/46/Catalan_Atlas_BNF_Sheet_6_Mansa_Musa_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original";
+  item.imageAlt = `Historical image related to ${item.title}`;
+});
+
 function getExploreArticles() {
   return exploreArticles;
+}
+
+function getUnifiedSearchIndex() {
+  return [
+    ...getExploreArticles().map(item => ({ ...item, type: "story", imageKey: item.id, label: "Article" })),
+    ...getHistoricalFigures().map(item => ({ ...item, type: "figure", imageKey: item.id, label: "Figure" })),
+    ...getCivilizations().map(item => ({ ...item, type: "civilization", imageKey: item.id, label: "Civilization" })),
+    ...getTimelineEvents().map(item => ({ ...item, type: "event", imageKey: item.id, label: "Event" }))
+  ];
 }
 
 /* ----------------------------------------------------------
@@ -359,6 +865,22 @@ function initNavigation() {
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
       document.body.classList.toggle("nav-open", isOpen);
     });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && menu.classList.contains("is-open")) {
+        menu.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        document.body.classList.remove("nav-open");
+        toggle.focus();
+      }
+    });
+    document.addEventListener("click", event => {
+      if (document.body.classList.contains("nav-open") &&
+          !menu.contains(event.target) && !toggle.contains(event.target)) {
+        menu.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        document.body.classList.remove("nav-open");
+      }
+    });
 
     menu.querySelectorAll("a").forEach(link => {
       link.addEventListener("click", () => {
@@ -398,4 +920,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initNavigation();
   initFooter();
+
+  const searchButton = document.querySelector("[data-header-search]");
+  if (searchButton) {
+    searchButton.addEventListener("click", () => {
+      window.location.href = "explore.html";
+    });
+  }
 });

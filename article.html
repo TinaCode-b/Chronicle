@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Article — Chronicle</title>
+<meta name="description" content="A Chronicle historical article.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="article">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-mark">C</span>Chronicle</a>
+    <nav class="nav-menu" data-nav-menu>
+      <ul class="nav-links">
+        <li><a href="index.html" data-page="home">Home</a></li>
+        <li><a href="explore.html" data-page="explore">Explore</a></li>
+        <li><a href="timeline.html" data-page="timeline">Events</a></li>
+        <li><a href="civilizations.html" data-page="civilizations">Civilizations</a></li>
+        <li><a href="figures.html" data-page="figures">Figures</a></li>
+        <li><a href="quizzes.html" data-page="quizzes">Quizzes</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <button class="header-search" type="button" data-header-search aria-label="Search Chronicle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </button>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg class="icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <article class="article-page" id="article-content"></article>
+</main>
+
+<script src="script.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get("type") || "story";
+  const id = params.get("id") || "";
+  const item = getChronicleItem(type, id);
+  const article = document.getElementById("article-content");
+  const name = item ? (item.name || item.title) : "Article not found";
+  const image = item ? itemImage(item, item.image || fallbackImage) : fallbackImage;
+  const category = type === "figure" ? "Historical figure" : type === "civilization" ? "Civilization" : type === "event" ? "Timeline event" : item?.category || "History";
+  const detail = item ? (item.description || "Explore the historical context, people, and ideas connected to this subject.") : "The requested Chronicle entry could not be found.";
+  const metadata = item ? [item.period, item.date, item.era, item.region, item.civilization].filter(Boolean) : [];
+
+  document.title = `${name} — Chronicle`;
+  article.innerHTML = `
+    <div class="container">
+      <a class="article-back" href="${type === "civilization" ? "civilizations.html" : type === "figure" ? "figures.html" : type === "event" ? "timeline.html" : "explore.html"}">&larr; Back to ${escapeHtml(category)}s</a>
+      <div class="article-layout">
+        <div class="article-copy">
+          <p class="hero-eyebrow">${escapeHtml(category)}</p>
+          <h1>${escapeHtml(name)}</h1>
+          <div class="article-meta">${metadata.map(value => `<span>${escapeHtml(value)}</span>`).join("")}</div>
+          ${item ? favoriteButton(type, item.id, name) : ""}
+          <p class="article-lede">${escapeHtml(detail)}</p>
+          <div class="article-at-a-glance">
+            <strong>At a glance</strong>
+            <p>${escapeHtml(name)} is connected to ${escapeHtml(metadata.filter(value => value !== item?.date && value !== item?.period).join(", ") || "a wider history of people, places, and ideas")}.</p>
+          </div>
+          <div class="article-section-label">A guided reading</div>
+          <h2>The story in context</h2>
+          <p>${escapeHtml(type === "figure" ? `${name} is best understood through the decisions, relationships, and pressures that shaped their time. Their story is not only a biography: it shows how individual choices could influence states, communities, and ideas.` : type === "civilization" ? `${name} developed through geography, institutions, exchange, and conflict. Studying how these forces worked together helps explain both its achievements and its lasting influence.` : type === "event" ? `This event mattered because it changed what people, rulers, or communities could do next. Its causes developed over time, and its consequences continued beyond the date shown here.` : `This subject connects people, places, and ideas across time. Looking closely at the evidence helps us understand not only what happened, but why it mattered.`)}</p>
+          <h2>What to remember</h2>
+          <p>${escapeHtml(item?.keywords?.length ? `Keep these ideas in mind: ${item.keywords.slice(0, 5).join(", ")}.` : "Historical understanding improves when dates are connected to people, places, and consequences.")}</p>
+          ${item && item.achievements ? `<h2>Key achievements</h2><ul class="article-list">${item.achievements.map(value => `<li>${escapeHtml(value)}</li>`).join("")}</ul>` : ""}
+        </div>
+        <figure class="article-figure">
+          <img data-topic-image data-topic="${escapeHtml(item?.keywords?.join(" ") || category)}" src="${image}" alt="${escapeHtml(itemImageAlt(item, name))}" onerror="imageOnErrorHandler(this,'${escapeHtml(name)}','${escapeHtml(id)}')">
+          <figcaption>Historical image from Wikimedia Commons, selected for this subject.</figcaption>
+        </figure>
+      </div>
+    </div>`;
+  if (!item) article.querySelector(".article-copy").innerHTML += `<p><a class="btn btn-primary" href="index.html">Return home</a></p>`;
+});
+</script>
+</body>
+</html>
